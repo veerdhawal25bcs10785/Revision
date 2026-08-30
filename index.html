@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Recall — Revision Tracker</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧠</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<!-- ================= LOCK SCREEN ================= -->
+<div id="lockScreen" class="lock-screen">
+  <div class="lock-card">
+    <div class="lock-mark">
+      <svg width="34" height="34" viewBox="0 0 24 24" fill="none"><path d="M12 2 3 6v6c0 5.25 3.75 9.5 9 10 5.25-.5 9-4.75 9-10V6l-9-4Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M9 12.5 11.2 14.7 15.5 10" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </div>
+    <h1 id="lockTitle" class="lock-title">Set your passkey</h1>
+    <p id="lockSub" class="lock-sub">This locks the tracker on this device. There's no recovery — write it down somewhere safe.</p>
+
+    <form id="lockForm" class="lock-form" autocomplete="off">
+      <input id="pwInput" type="password" class="lock-input" placeholder="Passkey" autocomplete="new-password" />
+      <input id="pwConfirm" type="password" class="lock-input" placeholder="Confirm passkey" autocomplete="new-password" />
+      <button type="submit" id="lockBtn" class="lock-btn">Set passkey &amp; enter</button>
+      <p id="lockError" class="lock-error"></p>
+    </form>
+  </div>
+  <p class="lock-footnote">Recall · stored only in this browser</p>
+</div>
+
+<!-- ================= APP SHELL ================= -->
+<div id="appShell" class="app-shell hidden">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="brand">
+      <span class="brand-mark">◆</span>
+      <span class="brand-name">Recall</span>
+    </div>
+
+    <nav class="nav">
+      <button class="nav-item active" data-view="dashboard">
+        <span class="nav-ico">⌘</span><span>Dashboard</span>
+      </button>
+      <button class="nav-item" data-view="tasks">
+        <span class="nav-ico">✎</span><span>Topics</span>
+      </button>
+      <button class="nav-item" data-view="archive">
+        <span class="nav-ico">▤</span><span>Archive</span>
+      </button>
+      <button class="nav-item" data-view="settings">
+        <span class="nav-ico">⚙</span><span>Settings</span>
+      </button>
+    </nav>
+
+    <div class="sidebar-foot">
+      <button id="themeToggle" class="theme-toggle" aria-label="Toggle theme">
+        <span class="theme-icon sun">☀</span>
+        <span class="theme-track"><span class="theme-thumb"></span></span>
+        <span class="theme-icon moon">☾</span>
+      </button>
+      <button id="lockNowBtn" class="lock-now-btn" title="Lock now">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><rect x="5" y="11" width="14" height="9" rx="2" stroke="currentColor" stroke-width="1.7"/><path d="M8 11V7a4 4 0 0 1 8 0v4" stroke="currentColor" stroke-width="1.7"/></svg>
+        Lock now
+      </button>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
+
+    <!-- ---------- DASHBOARD ---------- -->
+    <section id="view-dashboard" class="view active-view">
+      <header class="view-head">
+        <div>
+          <p class="eyebrow">Overview</p>
+          <h1>Today's memory load</h1>
+        </div>
+        <div class="head-actions">
+          <button class="btn ghost" id="exportJsonBtn">Export backup</button>
+          <label class="btn ghost file-btn">Import backup<input type="file" id="importJsonInput" accept="application/json" hidden></label>
+        </div>
+      </header>
+
+      <div class="stat-row" id="statRow"></div>
+
+      <div class="track-preview-card card">
+        <div class="card-head">
+          <h3>Spacing schedule</h3>
+          <span class="card-sub">Every topic follows this rhythm</span>
+        </div>
+        <div class="schedule-track" id="scheduleTrack"></div>
+      </div>
+
+      <div class="chart-grid">
+        <div class="card chart-card">
+          <div class="card-head"><h3>Status breakdown</h3><span class="card-sub">All checkpoints</span></div>
+          <div class="chart-wrap"><canvas id="chartStatus"></canvas></div>
+        </div>
+        <div class="card chart-card">
+          <div class="card-head"><h3>Completed per month</h3><span class="card-sub">Last 6 months</span></div>
+          <div class="chart-wrap"><canvas id="chartMonthly"></canvas></div>
+        </div>
+        <div class="card chart-card">
+          <div class="card-head"><h3>By subject</h3><span class="card-sub">Checkpoint volume</span></div>
+          <div class="chart-wrap"><canvas id="chartSubject"></canvas></div>
+        </div>
+        <div class="card chart-card">
+          <div class="card-head"><h3>Recall streak</h3><span class="card-sub">Daily completions, last 12 weeks</span></div>
+          <div class="chart-wrap heatmap-wrap"><div id="heatmap" class="heatmap"></div></div>
+        </div>
+      </div>
+
+      <div class="two-col">
+        <div class="card list-card">
+          <div class="card-head"><h3>Due today</h3><span class="card-sub" id="todayCount">0 items</span></div>
+          <div id="todayList" class="mini-list"></div>
+        </div>
+        <div class="card list-card">
+          <div class="card-head"><h3>Backlog</h3><span class="card-sub" id="backlogCount">0 items</span></div>
+          <div id="backlogList" class="mini-list"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ---------- TOPICS / TASKS ---------- -->
+    <section id="view-tasks" class="view">
+      <header class="view-head">
+        <div>
+          <p class="eyebrow">Topics</p>
+          <h1>Add &amp; track</h1>
+        </div>
+        <button class="btn primary" id="addTopicBtn">+ New topic</button>
+      </header>
+
+      <div class="card add-form-card hidden" id="addFormCard">
+        <div class="card-head"><h3 id="formTitle">New topic</h3></div>
+        <form id="topicForm" class="topic-form">
+          <input type="hidden" id="editId">
+          <div class="field">
+            <label for="topicInput">Topic</label>
+            <input id="topicInput" type="text" placeholder="e.g. Krebs cycle" required>
+          </div>
+          <div class="field">
+            <label for="subjectInput">Subject</label>
+            <input id="subjectInput" type="text" placeholder="e.g. Biochemistry" required>
+          </div>
+          <div class="field">
+            <label for="dateInput">Date learned</label>
+            <input id="dateInput" type="date" required>
+          </div>
+          <div class="form-actions">
+            <button type="button" class="btn ghost" id="cancelFormBtn">Cancel</button>
+            <button type="submit" class="btn primary" id="saveTopicBtn">Save topic</button>
+          </div>
+        </form>
+      </div>
+
+      <div class="filter-row">
+        <input type="text" id="searchInput" class="search-input" placeholder="Search topic or subject…">
+        <select id="subjectFilter" class="filter-select"><option value="">All subjects</option></select>
+      </div>
+
+      <div id="topicList" class="topic-list"></div>
+      <p id="emptyTopics" class="empty-state hidden">No topics yet — add one above to start your first spacing cycle.</p>
+    </section>
+
+    <!-- ---------- ARCHIVE ---------- -->
+    <section id="view-archive" class="view">
+      <header class="view-head">
+        <div>
+          <p class="eyebrow">Archive</p>
+          <h1>Year &amp; month log</h1>
+        </div>
+      </header>
+
+      <div class="year-tabs" id="yearTabs"></div>
+      <div id="monthGroups" class="month-groups"></div>
+      <p id="emptyArchive" class="empty-state hidden">Nothing logged yet. Checkpoints will appear here once you add topics.</p>
+    </section>
+
+    <!-- ---------- SETTINGS ---------- -->
+    <section id="view-settings" class="view">
+      <header class="view-head">
+        <div>
+          <p class="eyebrow">Settings</p>
+          <h1>Make it yours</h1>
+        </div>
+      </header>
+
+      <div class="card settings-card">
+        <div class="card-head"><h3>Appearance</h3></div>
+
+        <div class="setting-row">
+          <div>
+            <p class="setting-label">Theme</p>
+            <p class="setting-desc">Dark by default, easy on the eyes for late-night review.</p>
+          </div>
+          <div class="segmented" id="themeSegment">
+            <button data-theme="dark" class="seg-btn active">Dark</button>
+            <button data-theme="light" class="seg-btn">Light</button>
+          </div>
+        </div>
+
+        <div class="setting-row">
+          <div>
+            <p class="setting-label">Body font</p>
+            <p class="setting-desc">Used across lists, forms and cards.</p>
+          </div>
+          <select id="fontSelect" class="filter-select">
+            <option value="Inter">Inter (default)</option>
+            <option value="'JetBrains Mono'">JetBrains Mono</option>
+            <option value="Georgia">Georgia</option>
+            <option value="'Trebuchet MS'">Trebuchet MS</option>
+            <option value="system-ui">System default</option>
+          </select>
+        </div>
+
+        <div class="setting-row">
+          <div>
+            <p class="setting-label">Font size</p>
+            <p class="setting-desc">Scales all text in the app.</p>
+          </div>
+          <div class="size-control">
+            <button id="fontDec" class="seg-btn">A−</button>
+            <span id="fontSizeLabel">16px</span>
+            <button id="fontInc" class="seg-btn">A+</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card settings-card">
+        <div class="card-head"><h3>Data</h3></div>
+        <div class="setting-row">
+          <div>
+            <p class="setting-label">Export backup (JSON)</p>
+            <p class="setting-desc">Save all topics and settings to a file you can re-import later or on another device.</p>
+          </div>
+          <button class="btn ghost" id="exportJsonBtn2">Export backup</button>
+        </div>
+        <div class="setting-row">
+          <div>
+            <p class="setting-label">Import backup (JSON)</p>
+            <p class="setting-desc">Restore from a previously exported file. This merges with — doesn't replace — what's here.</p>
+          </div>
+          <label class="btn ghost file-btn">Choose file<input type="file" id="importJsonInput2" accept="application/json" hidden></label>
+        </div>
+      </div>
+
+      <div class="card settings-card">
+        <div class="card-head"><h3>About the passkey</h3></div>
+        <p class="about-text">Your passkey is set once, the first time you open Recall on a device, and stored only in this browser. There's intentionally no "forgot passkey" flow and no in-app way to erase your data — both are trade-offs for keeping this a fully static, backend-free site you can host for free on GitHub Pages.</p>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- Toast -->
+<div id="toast" class="toast"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="js/lock.js"></script>
+<script src="js/data.js"></script>
+<script src="js/charts.js"></script>
+<script src="js/export.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
